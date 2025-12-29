@@ -9,11 +9,14 @@ on:
     branches:
       - main
 
-# переменная, чтобы не повторять текст
+# переменные, чтобы не повторять текст
 env:
   PATH_FOR_LINT: "src config tests"
+  SERVER_USER: ${{ secrets.SERVER_USER }}
+  SERVER_HOST: ${{ secrets.SERVER_HOST }}
+  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+  DEPLOY_PATH: "/home/${{ secrets.SERVER_USER }}/otus-cicd"
 
-# какие джобы
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -65,5 +68,39 @@ jobs:
           source .bashrc
           pytest --cov=src tests
 
-  # build:
+  build:
+    runs-on: ubuntu-latest
+    steps: # шаги джобы
+      - name: Checkout code         # копируем код
+        uses: actions/checkout@v4   # используем готовый action
+
+        # соберём без докера, скопируем код на VM в Yandex Cloud
+      - name: Copy files to VM
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USER }}
+          password: ${{ env.SSH_PRIVATE_KEY }}
+          source: ".bashrc,requirements,src,config,models,data,scripts"
+          target: ${{ env.DEPLOY_PATH }}
+
+      - name: Install dependencies on VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USER }}
+          password: ${{ env.SSH_PRIVATE_KEY }}
+        script: |
+          cd ${{ env.DEPLOY_PATH }}
+          source .bashrc
+          ls -la
+          if [[ -d .venv ]]; then
+            echo "Virtual environment already exists. Skipping creation"
+          else
+            python3 -m venv .venv
+          fi
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements/requirements.txt
+
   # deploy:
