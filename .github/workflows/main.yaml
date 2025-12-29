@@ -19,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps: # шаги джобы
       - name: Checkout code         # копируем код
-        uses: actions/checkout@v2   # используем готовый action
+        uses: actions/checkout@v4   # используем готовый action
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.8'
 
@@ -42,6 +42,28 @@ jobs:
       - name: Run ruff
         run: ruff check ${PATH_FOR_LINT}
 
-  # test:
+  test:
+    runs-on: ubuntu-latest
+    steps: # шаги джобы
+      - name: Checkout code         # копируем код
+        uses: actions/checkout@v4   # используем готовый action
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      - name: Install dependencies
+        run: |
+          source .bashrc
+          pip install --upgrade pip
+          pip install -r requirements/requirements-test.txt
+          pip install -r requirements/requirements.txt
+
+      - name: Run pytest
+        run: |
+          source .bashrc
+          pytest --cov=src tests
+
   # build:
   # deploy:
